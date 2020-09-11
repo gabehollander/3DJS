@@ -1,5 +1,4 @@
 import React, {useEffect,useRef} from 'react';
-import logo from './logo.svg';
 import './App.css';
 import * as THREE from 'three';
 import * as CANNON from 'cannon';
@@ -8,6 +7,7 @@ import createPlatform from './components/platform';
 import createPlayer from './components/player';
 import { Figure } from './library/figure';
 import { CONSTANTS } from './library/util'
+import { createSpawner } from './components/spawner';
 
 
 function App() {
@@ -57,6 +57,7 @@ function App() {
         initThree();
         initCannon();
         Figure.initFigures(scene,world,figures,onLoad);
+        createSpawner(world,scene,figures);
         animate()
 
         function animate() {

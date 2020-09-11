@@ -3,7 +3,10 @@ const CONSTANTS = {
     RIGHT: 39,
     DOWN: 40,
     UP: 38,
-    TIMESTEP: 1/60
+    JUMP: 32,
+    TIMESTEP: 1/60,
+    VELOCITY_MAGNITUDE: 10,
+    PLATFORM_SIZE: 100
 }
 
 export {CONSTANTS}
