@@ -13,7 +13,6 @@ export class Figure {
 
         function initFigure(scene, world, fn, addFigure) {
             const fig = fn();
-            addFigure(fig);
             scene.add(fig.mesh);
             if (fig.body) {
                 world.addBody(fig.body);

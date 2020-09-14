@@ -29,12 +29,7 @@ function App() {
   const [PMREMGenerator, setPMREMGenerator] = useState(null);
   const [scene, setScene] = useState(null);
   const [animationFrame, setAnimationFrame] = useState(null);
-
-  // const addFigure = (fig) => {
-  //   let temp = [...figures]
-  //   temp = temp.concat(fig);
-  //   setFigures(temp);
-  // }
+  const [spawnerIntervalId,setSpawnerIntervalId] = useState(null);
 
   useEffect(()=> {
     const s = new THREE.Scene();
@@ -48,6 +43,8 @@ function App() {
     w.gravity.set(0,-50, 0);
     w.broadphase = new CANNON.NaiveBroadphase();
     setWorld(w);
+
+    setShouldRestart(true);
   
   },[])
 
@@ -79,12 +76,9 @@ function App() {
   },[renderer,camera])
 
   useEffect(() => {
-    if (scene && world && camera) {
-      const addBodyToRemove = (body) => {
-        setBodiesToRemove(bodiesToRemove.push(body));
-      }
+    if (scene && world && camera && shouldRestart) {
       const addFigure = (fig) => {
-        figures.push(fig)
+        fig.forEach(f => figures.push(f))
         setFigures(figures);
       }
       const onLoad = [
@@ -97,22 +91,16 @@ function App() {
       ];
       Figure.initFigures(scene,world,onLoad,addFigure);
     }
-  },[scene,world,camera])
+  },[scene,world,camera,shouldRestart])
 
   useEffect(() => {
-    if (world && renderer && camera) {
-      console.log(figures);
-      // if (animationFrame) {
-      //   window.cancelAnimationFrame(animationFrame);
-      //   setAnimationFrame(null);
-      // }
+    if (world && renderer && camera && scene) {
       const player = figures.find(x=> x.name === 'player');
       const water = figures.find(x=> x.name === 'water');
       function animate() {
         if (!animationFrame) {
           setAnimationFrame(requestAnimationFrame( animate ));
         }
-        // requestAnimationFrame( animate )
         if (water) {
           water.mesh.material.uniforms[ 'time' ].value += 1.0 / 60.0;
         }
@@ -140,20 +128,10 @@ function App() {
     }
 
     function render() {
-      // const removeBodies = () => {
-      //   bodiesToRemove.forEach(body => {
-      //     world.remove(body);
-      //     body.meshRef.geometry.dispose()
-      //     body.meshRef.material.dispose()
-      //     scene.remove(body.meshRef);
-      //   })
-      //   setBodiesToRemove([]);
-      // }
-      // removeBodies();
       renderer.render( scene, camera );
     }
 
-  },[renderer,world,camera,figures,animationFrame])
+  },[renderer,world,camera,scene,animationFrame,shouldRestart])
 
    useEffect(()=> {
      if (!animationStarted) {
@@ -164,12 +142,12 @@ function App() {
 
       if (player && water && sky && world && scene && PMREMGenerator && camera) {
         const addFigure = (fig) => {
-          figures.push(fig)
+          fig.forEach(f => figures.push(f))
           setFigures(figures);
         }
         setAnimationStarted(true);
         updateSun(sky,scene);
-        createSpawner(world,scene,addFigure);
+        setSpawnerIntervalId(createSpawner(world,scene,addFigure));
         function updateSun(sky,scene) {
     
           const sun = new THREE.Vector3();
@@ -193,36 +171,39 @@ function App() {
         }
       }
      }
-   },[figures,world,scene,PMREMGenerator,camera]);
+   },[figures,world,scene,PMREMGenerator,camera,animationStarted]);
 
-  // useEffect(()=> {
-  // const removeBodies = () => {
-  //   bodiesToRemove.forEach(body => {
-  //     world.remove(body);
-  //     body.meshRef.geometry.dispose()
-  //     body.meshRef.material.dispose()
-  //     scene.remove(body.meshRef);
-  //   })
-  //   setBodiesToRemove([]);
-  // }
-  // removeBodies();
-  // },[bodiesToRemove]);
+  useEffect(() => {
+    if (animationFrame && animationStarted) {
+      setShouldRestart(false);
+    }
 
-  // list of figures to load initially
+  },[animationFrame,animationStarted])
 
+  useEffect(()=> {
 
-  // useEffect(()=> {
-  //   const removeBodies = () => {
-  //     bodiesToRemove.forEach(body => {
-  //       world.remove(body);
-  //       body.meshRef.geometry.dispose()
-  //       body.meshRef.material.dispose()
-  //       scene.remove(body.meshRef);
-  //     })
-  //     setBodiesToRemove([]);
-  //   }
-  //   removeBodies();
-  // },[bodiesToRemove]);
+    if (world && scene) {
+      const removeBodies = () => {
+        bodiesToRemove.forEach(body => {
+          world.remove(body);
+          body.meshRef.geometry.dispose()
+          body.meshRef.material.dispose()
+          scene.remove(body.meshRef);
+        })
+        setBodiesToRemove([]);
+      }
+      if (bodiesToRemove.length > 0) {
+        removeBodies();
+      }
+    }
+  },[bodiesToRemove,world,scene]);
+
+  const addBodyToRemove = (body) => {
+    if (bodiesToRemove.indexOf(body) === -1) {
+      bodiesToRemove.push(body)
+      setBodiesToRemove([...bodiesToRemove]);
+    }
+  }
 
   const endGame = () => {
     setGameOver(true);
@@ -230,29 +211,23 @@ function App() {
   }
   
   const restart = (figures) => {
-    console.log(shouldRestart);
-    console.log(figures);
+    setGameOver(false);
+    clearInterval(spawnerIntervalId)
+    cancelAnimationFrame(animationFrame);
+    setAnimationFrame(null);
+    setAnimationStarted(false);
     figures.forEach(fig => {
-      console.log(fig);
-      world.remove(fig.body);
+      if (fig.body) {
+        world.remove(fig.body);
+      }
       fig.mesh.geometry.dispose()
       fig.mesh.material.dispose()
       scene.remove(fig.mesh);
     })
+    setFigures([]);
     setShouldRestart(true);
-
   }
 
-  const gameOverStyle = {
-    backgroundColor: 'white',
-    height: '200px',
-    width: '200px',
-    position: 'fixed',
-    top: '50%',
-    left: '50%',
-    /* bring your own prefixes */
-    transform: 'translate(-50%, -50%)'
-  }
   return (
     <div>
 

@@ -21,8 +21,10 @@ const createCollisionPlane = (removeBody, endGame) => {
     planeBody.meshRef = planeMesh;
 
     planeBody.addEventListener("collide",function(e){
-        removeBody(e.body,e.meshRef)
-        endGame();
+        setTimeout(() => {
+            removeBody(e.body,e.meshRef)
+            endGame();
+        },0)
     });
 
     return new Figure(planeBody, planeMesh, "collision-plane");
