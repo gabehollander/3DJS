@@ -8,6 +8,8 @@ const createPlatform = () => {
     const platformShape = new CANNON.Box(new CANNON.Vec3(48, 48, 2.5));
     const platformBody = new CANNON.Body({
     mass: 0, // mass == 0 makes the body static
+    collisionFilterGroup: 2, // Put plane in group 2
+    collisionFilterMask: 6 // It can only collide with group 2
     });
     platformBody.addShape(platformShape);
     // groundBody.position.set(0,5,0);
