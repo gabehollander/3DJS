@@ -2,6 +2,7 @@ import React, {useEffect,useState, useRef} from 'react';
 import './App.css';
 import * as THREE from 'three';
 import * as CANNON from 'cannon';
+import TWEEN from '@tweenjs/tween.js';
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
 import createPlatform from './components/platform';
 import createPlayer from './components/player';
@@ -30,6 +31,7 @@ function App() {
   const [scene, setScene] = useState(null);
   const [animationFrame, setAnimationFrame] = useState(null);
   const [spawnerIntervalId,setSpawnerIntervalId] = useState(null);
+  const [cameraControls, setCameraControls] = useState(null);
 
   useEffect(()=> {
     const s = new THREE.Scene();
@@ -59,7 +61,6 @@ function App() {
     if (scene) {
       const c = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, .1, 1000 );
       c.position.set(-75,40,100); // camera position to x , y , z
-      c.lookAt( new THREE.Vector3() )
       setCamera(c);
       scene.add( c );
     }
@@ -71,7 +72,10 @@ function App() {
       const cont = new OrbitControls( camera, renderer.domElement );
       // disable the arrow keys for camera movement
       cont.enableKeys = false;
+      cont.autoRotate = true;
+      cont.autoRotateSpeed = 1;
       cont.update()
+      setCameraControls(cont);
     }
   },[renderer,camera])
 
@@ -94,9 +98,11 @@ function App() {
   },[scene,world,camera,shouldRestart])
 
   useEffect(() => {
-    if (world && renderer && camera && scene) {
-      const player = figures.find(x=> x.name === 'player');
-      const water = figures.find(x=> x.name === 'water');
+    const player = figures.find(x=> x.name === 'player');
+    const water = figures.find(x=> x.name === 'water');
+    const playerCollisionPane = figures.find(x=> x.name === 'collision-plane');
+
+    if (world && renderer && camera && cameraControls && scene && player && water && playerCollisionPane) {
       function animate() {
         if (!animationFrame) {
           setAnimationFrame(requestAnimationFrame( animate ));
@@ -104,10 +110,15 @@ function App() {
         if (water) {
           water.mesh.material.uniforms[ 'time' ].value += 1.0 / 60.0;
         }
-        updatePhysics();
         if (player) {
           player.fns.handlePlayerMovement();
         }
+        if (water && playerCollisionPane) {
+          water.body.position.y += .005;
+          playerCollisionPane.body.position.y += .005;
+        }
+        updatePhysics();
+        cameraControls.update();
         render();
       }
       animate()
@@ -131,7 +142,7 @@ function App() {
       renderer.render( scene, camera );
     }
 
-  },[renderer,world,camera,scene,animationFrame,shouldRestart])
+  },[renderer,world,camera,cameraControls,scene,figures,animationFrame,shouldRestart])
 
    useEffect(()=> {
      if (!animationStarted) {
@@ -186,8 +197,12 @@ function App() {
       const removeBodies = () => {
         bodiesToRemove.forEach(body => {
           world.remove(body);
-          body.meshRef.geometry.dispose()
-          body.meshRef.material.dispose()
+          if (body.meshRef.geometry) {
+            body.meshRef.geometry.dispose()
+          }
+          if (body.meshRef.material) {
+            body.meshRef.material.dispose()
+          }
           scene.remove(body.meshRef);
         })
         setBodiesToRemove([]);
